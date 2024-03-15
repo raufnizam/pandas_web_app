@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload File</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <style>
+        .main_container{
+            width: 90%;
+            margin: 0 auto;
+        }
+    </style>
+    <div class="main_container">
+
+        <h1>Upload File</h1>
+        <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+    {% if error_message %}
+        {{ error_message }}
+    {% endif %}
+    <br>
+    {% if file_contents %}
+        {% if shape %}
+            <h3>Shape is (row/column): {{ shape }}</h3>
+        {% endif %}
+        
+        
+                
+        <div style="display: inline-block;">
+            <h2>Search:</h2>
+            <input type="text" id="search-input" placeholder="Enter search term">    
+        </div>
+        <div style="display: inline-block;">
+            <h2>Column Names:</h2>
+            <select id="column-select">
+                <option value="" disabled selected>Select a column</option>
+                {% for column_name in column_names %}
+                <option value="{{ column_name }}">{{ column_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button id="show-summary-button">Show summary statistics</button>
+        <button id="show-data_type-button">Show Data type for columns</button>
+        <button id="show_all">Show all the data</button>
+        
+        <div id="dtypes_container" style="display: none;">
+            {% for data_type, value in data_types.items %}
+            <div>
+                <pre>{{ data_type }}: {{ value }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+        <h2 id="summary-header" style="display: none;">Summary Statistics:</h2>
+        <div id="summary-container" style="display: none;">
+            {% if describe.empty %}
+            <p>No summary statistics to show</p>
+            {% else %}
+            <pre>{{ describe }}</pre>
+            {% endif %}
+        </div>
+        {% if filtered_data %}
+        <div>
+            <h2>Filtered Data</h2>
+            <p>{{ filtered_data }}</p>
+        </div>
+        {% endif %}
+        
+   
+
+        
+        <h2>Data:</h2>
+        <div id="data-container">
+            <!-- Initially, display all the data -->
+            <pre id="in-string">{{ in_string }}</pre>
+        </div>
+        {% endif %}
+        
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var fileContents = JSON.parse('{{ file_contents | escapejs }}');
+            var columnSelect = document.getElementById('column-select');
+            var searchInput = document.getElementById('search-input');
+            var dataContainer = document.getElementById('data-container');
+            var showAllButton = document.getElementById('show_all');
+            var inStringElement = document.getElementById('in-string');
+            var showSummaryButton = document.getElementById('show-summary-button');
+            var showDataTypeButton = document.getElementById('show-data_type-button');
+        
+            var summaryHeader = document.getElementById('summary-header');
+            var dtypesContainer = document.getElementById('dtypes_container');
+            var summaryContainer = document.getElementById('summary-container');
+            var isSummaryVisible = false; 
+            var isDtypesVisible = false; 
+            
+            
+            // Function to display all the data
+            function displayAllData() {
+                inStringElement.textContent = JSON.stringify(fileContents, null, 2);
+            }
+
+            // Function to display data for a specific column
+            function displayColumnData(columnName) {
+                var columnData = fileContents.map(function(record) {
+                    return record[columnName];
+                });
+                inStringElement.textContent = JSON.stringify(columnData, null, 2);
+            }
+
+            // Event listener for the "Show all" button
+            showAllButton.addEventListener('click', function() {
+                displayAllData();
+            });
+
+            // Event listener for column selection
+            columnSelect.addEventListener('change', function(event) {
+                var selectedColumn = event.target.value;
+                displayColumnData(selectedColumn);
+            });
+            
+            // Event listener for search input
+            searchInput.addEventListener('input', function(event) {
+                var searchQuery = event.target.value.toLowerCase();
+                var selectedColumn = columnSelect.value;
+                var filteredData = fileContents.filter(function(record) {
+                    return record[selectedColumn].toString().toLowerCase().includes(searchQuery);
+                });
+                inStringElement.textContent = JSON.stringify(filteredData, null, 2);
+            });
+
+            dtypesContainer.style.display = 'none';
+
+            showDataTypeButton.addEventListener('click', function() {
+                if (!isDtypesVisible) {
+                    dtypesContainer.style.display = 'block';
+                    isDtypesVisible = true;
+                } else {
+                    dtypesContainer.style.display = 'none';
+                    isDtypesVisible = false;
+                }
+            })
+
+            // Event listener for the "Show summary statistics" button
+            showSummaryButton.addEventListener('click', function() {
+                if (!isSummaryVisible) {
+                    summaryHeader.style.display = 'block';
+                    summaryContainer.style.display = 'block';
+                    isSummaryVisible = true;
+                } else {
+                    summaryHeader.style.display = 'none';
+                    summaryContainer.style.display = 'none';
+                    isSummaryVisible = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
